@@ -1,17 +1,17 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/naoina/go-stringutil"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"log"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
-    "flag"
-    "path/filepath"
-    "os"
 )
 
 type column struct {
@@ -55,14 +55,31 @@ EachField:
 
 		// Convert Go's type to SQL type
 		switch tn {
+		case "bool":
+			col.Type = "boolean"
+            col.Opt["null"] = "false"
 		case "int", "int16", "int32", "int64", "uint", "uint16", "uint32", "uint64":
 			col.Type = "integer"
+            col.Opt["null"] = "false"
 		case "string":
 			col.Type = "string"
+            col.Opt["null"] = "false"
 		case "byte[]":
 			col.Type = "binary"
+		case "float", "float64":
+			col.Type = "float"
+            col.Opt["null"] = "false"
 		case "Time":
-			col.Type = "timestamp"
+			col.Type = "timestamp"  // TODO Sometime, it's suite to use datetime.
+            col.Opt["null"] = "false"
+		case "NullBool":
+			col.Type = "boolean"
+		case "NullInt64":
+			col.Type = "integer"
+		case "NullFloat64":
+			col.Type = "float"
+		case "NullString":
+			col.Type = "string"
 		default:
 			log.Print(reflect.TypeOf(tp).String(), tp)
 		}
@@ -82,21 +99,22 @@ EachField:
 				switch kv[0] {
 				case "db":
 					switch kv[1] {
-					case "-":   // no target.
+					case "-": // no target.
 						continue EachField
-					case "pk":  // primary key
+					case "pk": // primary key
 						tbl.Pk = col.Name
-					case "unique":  // unique constraint
+					case "unique": // unique constraint
 						tbl.Index = append(tbl.Index, col.Name)
 					}
-				case "size":    // size constraint
+				case "size": // size constraint
 					col.Opt["limit"] = kv[1]
 				case "default": // default value
 					col.Opt["default"] = kv[1]
-				case "column":  // column name
+				case "column": // column name
 					col.Name = kv[1]
-				case "refer":   // reference to another table
+				case "refer": // reference to another table
 					col.Type = "references"
+                    delete(col.Opt, "null")
 					if len(kv[1]) > 0 {
 						col.Name = kv[1]
 					} else {
@@ -120,30 +138,30 @@ func parseFile(fset *token.FileSet, file *ast.File, tables []table) []table {
 	cm := ast.NewCommentMap(fset, file, file.Comments)
 
 	for node, cgs := range cm {
-//      To process module comment, here is a place for.
-//		if _, ok := node.(*ast.File); ok {
-//			for _, cg := range cgs {
-//				for _, c := range cg.List {
-//					log.Println(c.Text)
-//				}
-//			}
-//		}
-        if gd, ok := node.(*ast.GenDecl); ok {
+		//      To process module comment, here is a place for.
+		//		if _, ok := node.(*ast.File); ok {
+		//			for _, cg := range cgs {
+		//				for _, c := range cg.List {
+		//					log.Println(c.Text)
+		//				}
+		//			}
+		//		}
+		if gd, ok := node.(*ast.GenDecl); ok {
 			for _, spec := range gd.Specs {
 				if ts, ok := spec.(*ast.TypeSpec); !ok {
-                    continue
-                } else if st, ok2 := ts.Type.(*ast.StructType); !ok2 {
-                    continue
-                } else {
-                Outer:
-                    for _, cg := range cgs {
-                        for _, c := range cg.List {
-                            if strings.Contains(c.Text, `db:"entity"`) {
-                                tables = append(tables, parseStruct(gd, st))
-                                break Outer
-                            }
-                        }
-                    }
+					continue
+				} else if st, ok2 := ts.Type.(*ast.StructType); !ok2 {
+					continue
+				} else {
+				Outer:
+					for _, cg := range cgs {
+						for _, c := range cg.List {
+							if strings.Contains(c.Text, `db:"entity"`) {
+								tables = append(tables, parseStruct(gd, st))
+								break Outer
+							}
+						}
+					}
 				}
 			}
 		}
@@ -173,6 +191,9 @@ func putMigrate(tables []table) {
 			if !ixFlg && col.Name == tbl.Index[0] {
 				cs = cs + ", unique:true"
 			}
+			if len(col.Opt["null"]) > 0 {
+				cs = cs + ", null:" + col.Opt["null"]
+			}
 			fmt.Println(" ", cs)
 		}
 		fmt.Println("end")
@@ -180,7 +201,7 @@ func putMigrate(tables []table) {
 			is := fmt.Sprintf("add_index :%s, [", stringutil.ToSnakeCase(tbl.Name))
 			it := make([]string, 0)
 			for _, i := range tbl.Index {
-				it = append(it, ":" + stringutil.ToSnakeCase(i))
+				it = append(it, ":"+stringutil.ToSnakeCase(i))
 			}
 			is += strings.Join(it, ", ")
 			fmt.Print(is)
@@ -190,29 +211,28 @@ func putMigrate(tables []table) {
 	}
 }
 
-
 func init() {
 }
 
 func main() {
-    flag.Parse()
+	flag.Parse()
 
-    var tables []table
+	var tables []table
 
-    fn, _ := filepath.Abs(flag.Arg(0))
-    fi,_  := os.Stat(fn)
-    fset := token.NewFileSet()
-    if fi.IsDir() {
-        pkgs, _ := parser.ParseDir(fset, fn, nil, parser.ParseComments)
-        for _, pkg := range pkgs {
-            for _, file := range pkg.Files {
-                tables = parseFile(fset, file, tables)
-            }
-        }
-    } else {
-        file, _ := parser.ParseFile(fset, fn, nil, parser.ParseComments)
-        tables = parseFile(fset, file, tables)
-    }
+	fn, _ := filepath.Abs(flag.Arg(0))
+	fi, _ := os.Stat(fn)
+	fset := token.NewFileSet()
+	if fi.IsDir() {
+		pkgs, _ := parser.ParseDir(fset, fn, nil, parser.ParseComments)
+		for _, pkg := range pkgs {
+			for _, file := range pkg.Files {
+				tables = parseFile(fset, file, tables)
+			}
+		}
+	} else {
+		file, _ := parser.ParseFile(fset, fn, nil, parser.ParseComments)
+		tables = parseFile(fset, file, tables)
+	}
 
 	putMigrate(tables)
 }
