@@ -7,6 +7,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -57,21 +58,21 @@ EachField:
 		switch tn {
 		case "bool":
 			col.Type = "boolean"
-            col.Opt["null"] = "false"
+			col.Opt["null"] = "false"
 		case "int", "int16", "int32", "int64", "uint", "uint16", "uint32", "uint64":
 			col.Type = "integer"
-            col.Opt["null"] = "false"
+			col.Opt["null"] = "false"
 		case "string":
 			col.Type = "string"
-            col.Opt["null"] = "false"
+			col.Opt["null"] = "false"
 		case "byte[]":
 			col.Type = "binary"
 		case "float", "float64":
 			col.Type = "float"
-            col.Opt["null"] = "false"
+			col.Opt["null"] = "false"
 		case "Time":
-			col.Type = "timestamp"  // TODO Sometime, it's suite to use datetime.
-            col.Opt["null"] = "false"
+			col.Type = "timestamp" // TODO Sometime, it's suite to use datetime.
+			col.Opt["null"] = "false"
 		case "NullBool":
 			col.Type = "boolean"
 		case "NullInt64":
@@ -114,7 +115,7 @@ EachField:
 					col.Name = kv[1]
 				case "refer": // reference to another table
 					col.Type = "references"
-                    delete(col.Opt, "null")
+					delete(col.Opt, "null")
 					if len(kv[1]) > 0 {
 						col.Name = kv[1]
 					} else {
@@ -171,18 +172,20 @@ func parseFile(fset *token.FileSet, file *ast.File, tables []table) []table {
 }
 
 // Output in Rails's migration file format.
-func putMigrate(tables []table) {
+func putMigrate(tables []table, w io.Writer) {
 	for _, tbl := range tables {
 		ixFlg := true
 		if len(tbl.Index) == 1 {
 			ixFlg = false
 		}
 
-		fmt.Printf("create_table '%s'", stringutil.ToSnakeCase(tbl.Name))
+		fmt.Fprintf(w, "create_table '%s'", stringutil.ToSnakeCase(tbl.Name))
 		if len(tbl.Pk) == 0 {
-			fmt.Print(", id:false")
+			fmt.Fprint(w, ", id:false")
+		} else if tbl.Pk != "Id" {
+			fmt.Fprint(w, ", primary_key:", stringutil.ToSnakeCase(tbl.Pk))
 		}
-		fmt.Printf(" do |t|\n")
+		fmt.Fprint(w, " do |t|\n")
 		for _, col := range tbl.Columns {
 			if col.Name == tbl.Pk {
 				continue
@@ -194,9 +197,9 @@ func putMigrate(tables []table) {
 			if len(col.Opt["null"]) > 0 {
 				cs = cs + ", null:" + col.Opt["null"]
 			}
-			fmt.Println(" ", cs)
+			fmt.Fprintln(w, " ", cs)
 		}
-		fmt.Println("end")
+		fmt.Fprintln(w, "end")
 		if len(tbl.Index) > 1 {
 			is := fmt.Sprintf("add_index :%s, [", stringutil.ToSnakeCase(tbl.Name))
 			it := make([]string, 0)
@@ -204,10 +207,10 @@ func putMigrate(tables []table) {
 				it = append(it, ":"+stringutil.ToSnakeCase(i))
 			}
 			is += strings.Join(it, ", ")
-			fmt.Print(is)
-			fmt.Println("], unique:true")
+			fmt.Fprint(w, is)
+			fmt.Fprintln(w, "], unique:true")
 		}
-		fmt.Println()
+		fmt.Fprintln(w)
 	}
 }
 
@@ -234,5 +237,5 @@ func main() {
 		tables = parseFile(fset, file, tables)
 	}
 
-	putMigrate(tables)
+	putMigrate(tables, os.Stdout)
 }
