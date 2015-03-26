@@ -47,7 +47,7 @@ type Fragments struct {
 	buf := bytes.NewBufferString("")
 	putMigrate(tables, buf)
 	if buf.String() !=
-		`create_table 'fragments', primary_key:hidden_pk do |t|
+		`create_table 'fragments', primary_key:'hidden_pk' do |t|
   t.integer :id, null:false
   t.integer :version, null:false
   t.string :addr, null:false

@@ -183,7 +183,7 @@ func putMigrate(tables []table, w io.Writer) {
 		if len(tbl.Pk) == 0 {
 			fmt.Fprint(w, ", id:false")
 		} else if tbl.Pk != "Id" {
-			fmt.Fprint(w, ", primary_key:", stringutil.ToSnakeCase(tbl.Pk))
+			fmt.Fprint(w, ", primary_key:'", stringutil.ToSnakeCase(tbl.Pk),"'")
 		}
 		fmt.Fprint(w, " do |t|\n")
 		for _, col := range tbl.Columns {
