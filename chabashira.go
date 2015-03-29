@@ -214,7 +214,38 @@ func putMigrate(tables []table, w io.Writer) {
 	}
 }
 
+var (
+	out settableWriter = settableWriter{os.Stdout}
+)
+
+type settableWriter struct {
+	out io.Writer
+}
+
+func (*settableWriter) String() string {
+	return ""
+}
+
+func (s *settableWriter) Set(fn string) error {
+	f, err := os.Create(fn)
+	if f == nil || err != nil {
+		log.Print(err)
+		return err
+	}
+	s.out = f
+	return nil
+}
+
+func (s settableWriter) Write(p []byte) (int, error) {
+	if s.out == nil {
+		log.Print("Not initialized.")
+		return 0, nil
+	}
+	return s.out.Write(p)
+}
+
 func init() {
+	flag.Var(&out, "o", "Output file path.")
 }
 
 func main() {
@@ -223,7 +254,10 @@ func main() {
 	var tables []table
 
 	fn, _ := filepath.Abs(flag.Arg(0))
-	fi, _ := os.Stat(fn)
+	fi, err := os.Stat(fn)
+	if err != nil {
+		log.Panic(err)
+	}
 	fset := token.NewFileSet()
 	if fi.IsDir() {
 		pkgs, _ := parser.ParseDir(fset, fn, nil, parser.ParseComments)
@@ -237,5 +271,5 @@ func main() {
 		tables = parseFile(fset, file, tables)
 	}
 
-	putMigrate(tables, os.Stdout)
+	putMigrate(tables, out)
 }
