@@ -214,8 +214,24 @@ func putMigrate(tables []table, w io.Writer) {
 	}
 }
 
+func putNames(tables []table, pkg string, w io.Writer) {
+	fmt.Fprintln(w, "package", pkg)
+	for _, tbl := range tables {
+		fmt.Fprintln(w, "// ", tbl.Name)
+		for _, col := range tbl.Columns {
+			fmt.Fprintln(w, "func (*", tbl.Name, ") ",stringutil.ToSnakeCase(col.Name),"() string {")
+			fmt.Fprint(w, "\treturn \"")
+			fmt.Fprint(w, stringutil.ToSnakeCase(col.Name))
+			fmt.Fprintln(w, "\"")
+			fmt.Fprintln(w, "}")
+		}
+	}
+}
+
 var (
-	out settableWriter = settableWriter{os.Stdout}
+	schmOut settableWriter = settableWriter{os.Stdout}
+	nmOut settableWriter
+	nmPkg string
 )
 
 type settableWriter struct {
@@ -244,8 +260,14 @@ func (s settableWriter) Write(p []byte) (int, error) {
 	return s.out.Write(p)
 }
 
+func (s settableWriter) IsWriteble() bool {
+	return s.out != nil
+}
+
 func init() {
-	flag.Var(&out, "o", "Output file path.")
+	flag.Var(&schmOut, "o", "Output schema file path.")
+	flag.Var(&nmOut, "n", "Output name file path.")
+	flag.StringVar(&nmPkg, "p", "main", "Package name for generating files.")
 }
 
 func main() {
@@ -271,5 +293,9 @@ func main() {
 		tables = parseFile(fset, file, tables)
 	}
 
-	putMigrate(tables, out)
+	putMigrate(tables, schmOut)
+
+	if nmOut.IsWriteble() {
+		putNames(tables, nmPkg, nmOut)
+	}
 }

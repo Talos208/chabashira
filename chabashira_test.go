@@ -57,4 +57,25 @@ add_index :fragments, [:id, :version, :addr], unique:true
 ` {
 		t.Error("Fail to put in AR format : '", buf.String(), "'")
 	}
+
+	buf.Truncate(0)
+	putNames(tables, "main", buf)
+	if buf.String() != `package main
+//  Fragments
+func (* Fragments )  hidden_pk () string {
+	return "hidden_pk"
+}
+func (* Fragments )  id () string {
+	return "id"
+}
+func (* Fragments )  version () string {
+	return "version"
+}
+func (* Fragments )  addr () string {
+	return "addr"
+}
+` {
+		t.Error("Fail to put in name file : '", buf.String(), "'")
+	}
+
 }
