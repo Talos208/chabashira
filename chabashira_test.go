@@ -49,7 +49,7 @@ type Fragments struct {
 	if buf.String() !=
 		`create_table 'fragments', primary_key:'hidden_pk' do |t|
   t.integer :id, null:false
-  t.integer :version, null:false
+  t.integer :version, null:false, default:0
   t.string :addr, null:false
 end
 add_index :fragments, [:id, :version, :addr], unique:true

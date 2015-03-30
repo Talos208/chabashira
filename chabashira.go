@@ -197,6 +197,9 @@ func putMigrate(tables []table, w io.Writer) {
 			if len(col.Opt["null"]) > 0 {
 				cs = cs + ", null:" + col.Opt["null"]
 			}
+			if len(col.Opt["default"]) > 0 {
+				cs = cs + ", default:" + col.Opt["default"]
+			}
 			fmt.Fprintln(w, " ", cs)
 		}
 		fmt.Fprintln(w, "end")
