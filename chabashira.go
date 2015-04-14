@@ -59,9 +59,18 @@ EachField:
 		case "bool":
 			col.Type = "boolean"
 			col.Opt["null"] = "false"
-		case "int", "int16", "int32", "int64", "uint", "uint16", "uint32", "uint64":
+		case "int", "int64", "uint", "uint64":
 			col.Type = "integer"
 			col.Opt["null"] = "false"
+			col.Opt["limit"] = "8"
+		case "int32", "uint32":
+			col.Type = "integer"
+			col.Opt["null"] = "false"
+			col.Opt["limit"] = "4"
+		case "int16", "uint16":
+			col.Type = "integer"
+			col.Opt["null"] = "false"
+			col.Opt["limit"] = "2"
 		case "string":
 			col.Type = "string"
 			col.Opt["null"] = "false"
@@ -118,8 +127,6 @@ EachField:
 					delete(col.Opt, "null")
 					if len(kv[1]) > 0 {
 						col.Name = kv[1]
-					} else {
-						col.Name = strings.TrimSuffix(col.Name, "Id")
 					}
 				}
 			}
@@ -187,11 +194,15 @@ func putMigrate(tables []table, w io.Writer) {
 		}
 		fmt.Fprint(w, " do |t|\n")
 		for _, col := range tbl.Columns {
-			if col.Name == tbl.Pk {
+			name := col.Name
+			if name == tbl.Pk {
 				continue
 			}
-			cs := fmt.Sprintf("t.%s :%s", col.Type, stringutil.ToSnakeCase(col.Name))
-			if !ixFlg && col.Name == tbl.Index[0] {
+			if col.Type == "references" {
+				name = strings.TrimSuffix(name, "Id")
+			}
+			cs := fmt.Sprintf("t.%s :%s", col.Type, stringutil.ToSnakeCase(name))
+			if !ixFlg && name == tbl.Index[0] {
 				cs = cs + ", unique:true"
 			}
 			if len(col.Opt["null"]) > 0 {
@@ -199,6 +210,9 @@ func putMigrate(tables []table, w io.Writer) {
 			}
 			if len(col.Opt["default"]) > 0 {
 				cs = cs + ", default:" + col.Opt["default"]
+			}
+			if len(col.Opt["limit"]) > 0 {
+				cs = cs + ", limit:" + col.Opt["limit"]
 			}
 			fmt.Fprintln(w, " ", cs)
 		}
