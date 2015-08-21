@@ -60,7 +60,7 @@ EachField:
 			col.Type = "boolean"
 			col.Opt["null"] = "false"
 		case "int", "int64", "uint", "uint64":
-			col.Type = "integer"
+			col.Type = "bigint"
 			col.Opt["null"] = "false"
 			col.Opt["limit"] = "8"
 		case "int32", "uint32":
