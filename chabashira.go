@@ -60,7 +60,7 @@ EachField:
 			col.Type = "boolean"
 			col.Opt["null"] = "false"
 		case "int", "int64", "uint", "uint64":
-			col.Type = "bigint"
+			col.Type = "integer"
 			col.Opt["null"] = "false"
 			col.Opt["limit"] = "8"
 		case "int32", "uint32":
@@ -92,6 +92,10 @@ EachField:
 			col.Type = "string"
 		default:
 			log.Print(reflect.TypeOf(tp).String(), tp)
+		}
+
+		if !fld.Names[0].IsExported() {
+			continue
 		}
 
 		col.Name = fld.Names[0].String() // is it preferd to use stringutil.join() ?

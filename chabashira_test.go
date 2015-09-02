@@ -33,6 +33,7 @@ type Fragments struct {
 	Size     int32
 	Addr     string `+"`"+`db:"unique"`+"`"+`
 	PiyoId	 int64  `+"`"+`refer:""`+"`"+`
+	not_target	byte
 }
 
 `, parser.ParseComments)
@@ -66,7 +67,7 @@ type Fragments struct {
 		putMigrate(ts, buf)
 		if buf.String() !=
 		`create_table 'fragments', primary_key:'hidden_pk' do |t|
-  t.bigint :id, null:false, limit:8
+  t.integer :id, null:false, limit:8
   t.integer :version, null:false, default:0, limit:2
   t.integer :size, null:false, limit:4
   t.string :addr, null:false
