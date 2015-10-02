@@ -33,6 +33,8 @@ type Fragments struct {
 	Size     int32
 	Addr     string `+"`"+`db:"unique"`+"`"+`
 	PiyoId	 int64  `+"`"+`refer:""`+"`"+`
+	SmallVal int8
+	HogeFlg  byte
 	not_target	byte
 }
 
@@ -55,7 +57,7 @@ type Fragments struct {
 		if tbl.Pk != "HiddenPk" {
 			t.Error("Fail to get primary key")
 		}
-		if len(tbl.Columns) != 6 {
+		if len(tbl.Columns) != 8 {
 			t.Error("Fail to get column ", tbl.Columns)
 		}
 		if len(tbl.Index) != 3 {
@@ -72,6 +74,8 @@ type Fragments struct {
   t.integer :size, null:false, limit:4
   t.string :addr, null:false
   t.references :piyo, limit:8
+  t.integer :small_val, null:false, limit:1
+  t.integer :hoge_flg, null:false, limit:1
 end
 add_index :fragments, [:id, :version, :addr], unique:true
 
@@ -100,6 +104,12 @@ func (* Fragments )  addr () string {
 }
 func (* Fragments )  piyo_id () string {
 	return "piyo_id"
+}
+func (* Fragments )  small_val () string {
+	return "small_val"
+}
+func (* Fragments )  hoge_flg () string {
+	return "hoge_flg"
 }
 ` {
 			t.Error("Fail to put in name file : '", buf.String(), "'")

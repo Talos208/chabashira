@@ -71,6 +71,10 @@ EachField:
 			col.Type = "integer"
 			col.Opt["null"] = "false"
 			col.Opt["limit"] = "2"
+		case "int8","uint8","byte":
+			col.Type = "integer"
+			col.Opt["null"] = "false"
+			col.Opt["limit"] = "1"
 		case "string":
 			col.Type = "string"
 			col.Opt["null"] = "false"
