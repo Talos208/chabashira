@@ -22,7 +22,7 @@ type Dummy struct {
 // db:"entity"
 type Piyo struct {
 	Id			int64  `+"`"+`db:"pk"`+"`"+`
-	SomeValue	string
+	SomeValue	string `+"`"+`db:"unique"`+"`"+`
 }
 
 // db:"entity"
@@ -50,25 +50,38 @@ type Fragments struct {
 	}
 	fit := false
 	for _, tbl := range(tables) {
-		if tbl.Name != "Fragments" {
-			continue
-		}
-		fit = true
-		if tbl.Pk != "HiddenPk" {
-			t.Error("Fail to get primary key")
-		}
-		if len(tbl.Columns) != 8 {
-			t.Error("Fail to get column ", tbl.Columns)
-		}
-		if len(tbl.Index) != 3 {
-			t.Error("Fail to get index", tbl.Index)
-		}
+		switch tbl.Name {
+		case "Piyo":
+			buf := bytes.NewBufferString("")
+			ts := []table{tbl}
+			putMigrate(ts, buf)
+			if buf.String() !=
+			`create_table 'piyo' do |t|
+  t.string :some_value, unique:true, null:false
+end
+add_index :piyo, [:some_value], unique:true
 
-		buf := bytes.NewBufferString("")
-		ts := []table{tbl}
-		putMigrate(ts, buf)
-		if buf.String() !=
-		`create_table 'fragments', primary_key:'hidden_pk' do |t|
+` {
+				t.Error("Fail to put in AR format : '", buf.String(), "'")
+			}
+
+		case "Fragments":
+			fit = true
+			if tbl.Pk != "HiddenPk" {
+				t.Error("Fail to get primary key")
+			}
+			if len(tbl.Columns) != 8 {
+				t.Error("Fail to get column ", tbl.Columns)
+			}
+			if len(tbl.Index) != 3 {
+				t.Error("Fail to get index", tbl.Index)
+			}
+
+			buf := bytes.NewBufferString("")
+			ts := []table{tbl}
+			putMigrate(ts, buf)
+			if buf.String() !=
+			`create_table 'fragments', primary_key:'hidden_pk' do |t|
   t.integer :id, null:false, limit:8
   t.integer :version, null:false, default:0, limit:2
   t.integer :size, null:false, limit:4
@@ -80,12 +93,12 @@ end
 add_index :fragments, [:id, :version, :addr], unique:true
 
 ` {
-			t.Error("Fail to put in AR format : '", buf.String(), "'")
-		}
+				t.Error("Fail to put in AR format : '", buf.String(), "'")
+			}
 
-		buf.Truncate(0)
-		putNames(ts, "main", buf)
-		if buf.String() != `package main
+			buf.Truncate(0)
+			putNames(ts, "main", buf)
+			if buf.String() != `package main
 //  Fragments
 func (* Fragments )  hidden_pk () string {
 	return "hidden_pk"
@@ -112,10 +125,11 @@ func (* Fragments )  hoge_flg () string {
 	return "hoge_flg"
 }
 ` {
-			t.Error("Fail to put in name file : '", buf.String(), "'")
+				t.Error("Fail to put in name file : '", buf.String(), "'")
+			}
 		}
 	}
-	if !fit {
-		t.Error("Fail to get table name")
-	}
+		if !fit {
+			t.Error("Fail to get table name")
+		}
 }

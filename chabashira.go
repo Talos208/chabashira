@@ -225,7 +225,7 @@ func putMigrate(tables []table, w io.Writer) {
 			fmt.Fprintln(w, " ", cs)
 		}
 		fmt.Fprintln(w, "end")
-		if len(tbl.Index) > 1 {
+		if len(tbl.Index) > 0 {
 			is := fmt.Sprintf("add_index :%s, [", stringutil.ToSnakeCase(tbl.Name))
 			it := make([]string, 0)
 			for _, i := range tbl.Index {
