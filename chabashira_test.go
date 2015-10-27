@@ -36,6 +36,7 @@ type Fragments struct {
 	SmallVal int8
 	HogeFlg  byte
 	not_target	byte
+	UpdateAt	time.Time
 }
 
 `, parser.ParseComments)
@@ -70,7 +71,7 @@ add_index :piyo, [:some_value], unique:true
 			if tbl.Pk != "HiddenPk" {
 				t.Error("Fail to get primary key")
 			}
-			if len(tbl.Columns) != 8 {
+			if len(tbl.Columns) != 9 {
 				t.Error("Fail to get column ", tbl.Columns)
 			}
 			if len(tbl.Index) != 3 {
@@ -89,6 +90,7 @@ add_index :piyo, [:some_value], unique:true
   t.references :piyo, limit:8
   t.integer :small_val, null:false, limit:1
   t.integer :hoge_flg, null:false, limit:1
+  t.timestamp :update_at, null:true, default:0
 end
 add_index :fragments, [:id, :version, :addr], unique:true
 
@@ -123,6 +125,9 @@ func (* Fragments )  small_val () string {
 }
 func (* Fragments )  hoge_flg () string {
 	return "hoge_flg"
+}
+func (* Fragments )  update_at () string {
+	return "update_at"
 }
 ` {
 				t.Error("Fail to put in name file : '", buf.String(), "'")

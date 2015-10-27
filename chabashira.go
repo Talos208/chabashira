@@ -85,7 +85,8 @@ EachField:
 			col.Opt["null"] = "false"
 		case "Time":
 			col.Type = "timestamp" // TODO Sometime, it's suite to use datetime.
-			col.Opt["null"] = "false"
+			col.Opt["null"] = "true"
+			col.Opt["default"] = "0"
 		case "NullBool":
 			col.Type = "boolean"
 		case "NullInt64":
